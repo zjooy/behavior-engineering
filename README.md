@@ -37,6 +37,26 @@ O projeto inclui arquivos CSV relacionados ao conjunto **Online Shoppers Purchas
 | MLflow | Apoio ao acompanhamento de experimentos |
 | pytest e Ruff | Testes e qualidade de código |
 
+## Como utilizar
+
+Para instalar apenas dependências principais:
+```
+uv sync
+```
+
+Para instalar dependências do grupo notebook ou dev:
+```
+uv sync --group {notebook|dev}
+```
+
+Inicializar o servidor MLflow:
+```
+mlflow server --backend-store-uri sqlite:///mlflow.db \
+ --default-artifact-root ./artifacts \
+ --host 127.0.0.1 \
+ --port 5000
+```
+
 ## Estado atual
 
 Este repositório está no início: os dados e o notebook de exploração estão presentes, e as dependências para API, modelos e desenvolvimento estão declaradas. A implementação da API, o treinamento do modelo e os testes ainda são próximos passos.
