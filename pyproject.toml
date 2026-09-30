@@ -1,0 +1,27 @@
+[project]
+name = "behavior-engineering"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.142.1",
+    "joblib>=1.6.0",
+    "pydantic>=2.13.5",
+]
+
+[dependency-groups]
+dev = [
+    "mlflow>=3.16.1",
+    "pytest>=9.1.1",
+    "ruff>=0.16.9",
+]
+notebook = [
+    "ipykernel",
+    "jupyter",
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.3",
+    "pandas>=3.0.6",
+    "scipy>=1.18.1",
+    "seaborn>=0.13.2",
+]
