@@ -1,62 +1,57 @@
 # Behavior Engineering
 
-> Projeto em estágio inicial para desenvolver uma API de inferência de machine learning sobre intenção de compra em sessões de e-commerce.
+> Projeto de machine learning para estimar a intenção de compra em sessões de e-commerce com o conjunto **Online Shoppers Purchasing Intention**.
 
-## Visão do projeto
+## Objetivo
 
-O objetivo é usar dados de navegação de lojas virtuais para estimar se uma sessão tem intenção de compra (`Revenue`). A API deverá receber características de uma sessão e retornar uma previsão produzida por um modelo treinado.
+O alvo `Revenue` indica se uma sessão resultou em compra. O projeto contém análise exploratória, um modelo baseline e experimentos de classificação registrados com MLflow. FastAPI e Pydantic estão nas dependências, mas uma API de inferência ainda não foi implementada.
 
-```mermaid
-flowchart LR
-	A[Aplicação cliente] -->|dados da sessão| B[API FastAPI]
-	B --> C[Validação com Pydantic]
-	C --> D[Modelo de machine learning]
-	D -->|previsão| B
-	B -->|resultado da inferência| A
-```
+## Dados, notebooks e modelos
 
-*Fluxo pretendido; os componentes de inferência ainda estão em desenvolvimento.*
+O arquivo `data/online_shoppers_intention.csv` contém 12.330 sessões com atributos de navegação, duração, origem de tráfego e tipo de visitante. A variável alvo é desbalanceada: a maioria das sessões não resulta em compra.
 
-## Dados
-
-O projeto inclui arquivos CSV relacionados ao conjunto **Online Shoppers Purchasing Intention**. Cada registro descreve uma sessão com atributos como atividade de navegação, duração, origem do tráfego e tipo de visitante. `Revenue` indica se houve compra.
-
-| Arquivo | Uso previsto |
+| Caminho | Conteúdo |
 | --- | --- |
-| `data/online_shoppers_intention.csv` | Base para exploração e desenvolvimento |
-| `notebooks/eda.ipynb` | Exploração dos dados |
+| `notebooks/eda.ipynb` | Análise exploratória dos dados |
+| `notebooks/baseline_model.ipynb` | Regressão logística baseline; registra acurácia, F1, precisão, recall e PR-AUC no MLflow |
+| `notebooks/model_experiments.ipynb` | Compara árvore de decisão, Random Forest e XGBoost; otimiza hiperparâmetros do XGBoost com Optuna e validação cruzada estratificada de 5 folds, usando PR-AUC como objetivo |
+| `models/baseline_model.joblib` | Classificador baseline treinado |
+| `models/champion_model.joblib` | Pipeline campeão treinado, incluindo pré-processamento e classificador |
+| `artifacts/` | Artefatos e métricas registrados pelo MLflow |
 
-## Tecnologias
+Os dois modelos persistidos têm interfaces diferentes. O baseline contém apenas o classificador: codificação, transformações e escalonamento são feitos no notebook e não estão incluídos no arquivo. O campeão é um pipeline do scikit-learn com pré-processador e XGBoost, portanto inclui as etapas de pré-processamento usadas no treinamento.
 
-| Tecnologia | Papel no projeto |
-| --- | --- |
-| Python 3.12+ | Linguagem da aplicação |
-| FastAPI | Base para a futura API HTTP |
-| Pydantic | Validação dos dados de entrada e saída |
-| Joblib | Persistência e carregamento de artefatos do modelo |
-| MLflow | Apoio ao acompanhamento de experimentos |
-| pytest e Ruff | Testes e qualidade de código |
+## Configuração e execução
 
-## Como utilizar
+Requisitos: Python 3.12 ou superior e [uv](https://docs.astral.sh/uv/).
 
-Para instalar apenas dependências principais:
-```
-uv sync
+Instale as dependências de desenvolvimento e notebooks:
+
+```bash
+uv sync --group dev --group notebook
 ```
 
-Para instalar dependências do grupo notebook ou dev:
-```
-uv sync --group {notebook|dev}
+Inicie o servidor MLflow na raiz do repositório:
+
+```bash
+uv run mlflow server \
+  --backend-store-uri sqlite:///mlflow.db \
+  --default-artifact-root ./artifacts \
+  --host 127.0.0.1 \
+  --port 5000
 ```
 
-Inicializar o servidor MLflow:
+A interface fica disponível em `http://127.0.0.1:5000`. Em outro terminal, inicie o Jupyter a partir da pasta `notebooks`:
+
+```bash
+cd notebooks
+uv run jupyter lab
 ```
-mlflow server --backend-store-uri sqlite:///mlflow.db \
- --default-artifact-root ./artifacts \
- --host 127.0.0.1 \
- --port 5000
-```
+
+Os notebooks leem os dados usando caminhos relativos à pasta `notebooks`. Execute `baseline_model.ipynb` para treinar o baseline ou `model_experiments.ipynb` para comparar e otimizar modelos, registrar resultados no experimento `Online_Shoppers_Base` e salvar o pipeline campeão. O notebook de experimentos define `device="cuda"` para a busca de hiperparâmetros e para o treino final; em ambientes sem GPU CUDA, ajuste essa configuração para CPU antes de executar.
 
 ## Estado atual
 
-Este repositório está no início: os dados e o notebook de exploração estão presentes, e as dependências para API, modelos e desenvolvimento estão declaradas. A implementação da API, o treinamento do modelo e os testes ainda são próximos passos.
+A análise exploratória e os notebooks de treinamento estão no repositório, assim como os arquivos serializados do baseline e do pipeline campeão. O pacote `src/` ainda contém apenas o módulo inicial, sem rotina de inferência ou API, e `tests/` está vazio.
+
+Próximos passos possíveis: implementar inferência usando o pipeline campeão, criar a API e adicionar testes para validar entradas e previsões.
