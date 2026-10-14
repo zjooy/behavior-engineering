@@ -1,0 +1,28 @@
+# Parâmetros do pipeline. Serão consumidos pelos estágios do dvc.yaml.
+seed: 42
+
+data:
+  raw_path: data/online_shoppers_intention.csv
+  processed_dir: data/processed
+  target: Revenue
+  test_size: 0.2
+
+features:
+  drop: [Weekend, Region, Browser, OperatingSystems]
+  categorical: [Month, TrafficType, VisitorType]
+  ohe_min_frequency: 0.01
+
+# Melhores hiperparâmetros do estudo Optuna (notebooks/model_experiments.ipynb, CV PR-AUC 0.7519).
+model:
+  n_estimators: 177
+  learning_rate: 0.02929080317644553
+  max_depth: 4
+  subsample: 0.8134838044580179
+  colsample_bytree: 0.956810393362548
+  scale_pos_weight: 5.45
+  eval_metric: aucpr
+  tree_method: hist
+
+train:
+  model_path: models/model.joblib
+  metrics_path: metrics.json
