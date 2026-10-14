@@ -8,7 +8,7 @@ O alvo `Revenue` indica se uma sessão resultou em compra. O projeto contém an�
 
 ## Dados, notebooks e modelos
 
-O arquivo `data/online_shoppers_intention.csv` (versionado pelo DVC; obtenha com `uv run dvc pull`) contém 12.330 sessões com atributos de navegação, duração, origem de tráfego e tipo de visitante. A variável alvo é desbalanceada: a maioria das sessões não resulta em compra.
+O arquivo `data/online_shoppers_intention.csv` (versionado pelo DVC; obtenha com `uv run python -m dvc pull`) contém 12.330 sessões com atributos de navegação, duração, origem de tráfego e tipo de visitante. A variável alvo é desbalanceada: a maioria das sessões não resulta em compra.
 
 | Caminho | Conteúdo |
 | --- | --- |
@@ -31,13 +31,28 @@ Requisitos: Python 3.12 ou superior e [uv](https://docs.astral.sh/uv/). O projet
 | `uv sync --no-dev` | Só as dependências de produção (usado na imagem Docker) |
 | `uv sync --group notebook` | Adiciona Jupyter, Optuna e bibliotecas de gráficos |
 
-Primeira configuração da máquina:
+Instalação do uv (se `uv --version` não funcionar):
+
+```bash
+python -m pip install --user uv
+```
+
+Se depois disso `uv` ainda não for reconhecido, a pasta de scripts do Python não está no PATH. Use `python -m uv` no lugar de `uv` ou adicione a pasta ao PATH pelo PowerShell (prompt começando com `PS`) e reabra o terminal:
+
+```powershell
+$scripts = python -c "import sysconfig; print(sysconfig.get_path('scripts', 'nt_user'))"
+[Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvironmentVariable('Path', 'User') + ";$scripts", 'User')
+```
+
+Primeira configuração do projeto (na pasta do repositório):
 
 ```bash
 uv sync --group notebook
-cp .env.example .env               # ajuste os valores locais; o .env não vai para o Git
+cp .env.example .env               # no cmd do Windows: copy .env.example .env
 uv run pre-commit install          # roda ruff automaticamente antes de cada commit
 ```
+
+Ajuste os valores do `.env` para a sua máquina. Ele não vai para o Git. Em seguida, configure o DVC ([Dados e pipeline com DVC](#dados-e-pipeline-com-dvc)).
 
 Testes e lint:
 
@@ -100,25 +115,66 @@ data/online_shoppers_intention.csv ──► preprocess ──► data/processed
 
 O `dvc.yaml` define os estágios. As dependências de cada um (dados, código e parâmetros de `configs/params.yaml`) determinam o que precisa rodar de novo.
 
-Configure a credencial do DagsHub uma vez por máquina. Ela fica em `.dvc/config.local`, fora do Git. O token está em *DagsHub → Settings → Tokens*:
+### Primeira configuração (cada integrante, uma vez por máquina)
+
+Faça antes a seção [Ambiente](#ambiente): o `uv` precisa estar funcionando e o `uv sync` precisa ter rodado.
+
+**1. Crie sua conta no DagsHub e peça acesso ao repositório**
+
+- Crie a conta em [dagshub.com](https://dagshub.com/) (dá para entrar com a conta do GitHub).
+- Peça ao dono do repositório (`zjooy`) para adicioná-lo como colaborador em *DagsHub → behavior-engineering → Settings → Collaborators*. Sem isso, o `dvc push` é recusado.
+
+**2. Gere um token de acesso**
+
+No DagsHub: clique no seu avatar → *User Settings* → *Tokens*. Copie o token (ele funciona como uma senha; não compartilhe nem cole no código).
+
+**3. Configure a credencial no projeto**
+
+No terminal, **na pasta do projeto**, rode os três comandos trocando `<seu-usuario>` e `<seu-token>`:
 
 ```bash
-uv run dvc remote modify origin --local auth basic
-uv run dvc remote modify origin --local user <seu-usuario>
-uv run dvc remote modify origin --local password <seu-token>
+uv run python -m dvc remote modify origin --local auth basic
+uv run python -m dvc remote modify origin --local user <seu-usuario>
+uv run python -m dvc remote modify origin --local password <seu-token>
 ```
+
+O `--local` grava a credencial em `.dvc/config.local`, que **não vai para o Git**. O endereço do remote já vem configurado em `.dvc/config`.
+
+**4. Baixe os dados e confira**
+
+```bash
+uv run python -m dvc pull       # baixa o dataset, os splits e o modelo da versão atual
+uv run python -m dvc status -c  # deve responder: "Cache and remote 'origin' are in sync"
+```
+
+Pronto. O arquivo `data/online_shoppers_intention.csv` aparece na pasta `data/`.
+
+### Problemas comuns
+
+| Erro | Causa e solução |
+| --- | --- |
+| `uv` não é reconhecido como comando | A pasta do uv não está no PATH. Use `python -m uv ...` no lugar de `uv ...` ou adicione a pasta ao PATH (veja [Ambiente](#ambiente)) |
+| `A sintaxe do nome do arquivo... está incorreta` | O comando de PowerShell foi digitado no cmd. Use um terminal cujo prompt começa com `PS` |
+| `dvc.exe` ou `pytest.exe` bloqueado pelo Windows | O Controle de Aplicativo bloqueia o executável. Use a forma `python -m dvc` / `python -m pytest`, como nos exemplos acima |
+| `401 Unauthorized` / `403 Forbidden` no push ou pull | Token errado ou expirado (refaça o passo 3) ou falta acesso de colaborador (passo 1) |
+| `failed to hardlink` / `Acesso negado` no `uv sync` | Projeto dentro do OneDrive. Rode `$env:UV_LINK_MODE="copy"` (PowerShell) antes do `uv sync` |
+
+### Uso no dia a dia
 
 | Comando | O que faz |
 | --- | --- |
-| `uv run dvc pull` | Baixa do remote o dataset e as saídas da versão atual |
-| `uv run dvc repro` | Roda o pipeline, apenas os estágios cujas dependências mudaram |
-| `uv run dvc push` | Envia dados e saídas novos para o remote |
-| `uv run dvc metrics show` | Mostra as métricas atuais |
-| `uv run dvc params diff` / `uv run dvc metrics diff` | Compara parâmetros e métricas com o último commit |
+| `uv run python -m dvc pull` | Baixa do remote os dados da versão atual (rode depois de cada `git pull`) |
+| `uv run python -m dvc repro` | Roda o pipeline; só refaz os estágios cujas dependências mudaram |
+| `uv run python -m dvc push` | Envia dados e saídas novos para o remote |
+| `uv run python -m dvc metrics show` | Mostra as métricas atuais |
+| `uv run python -m dvc params diff` / `metrics diff` | Compara parâmetros e métricas com o último commit |
 
-Fluxo para um experimento: altere `configs/params.yaml`, rode `dvc repro`, compare com `dvc metrics diff` e, se o resultado for bom, faça commit de `params.yaml`, `dvc.lock` e `metrics.json` e depois `dvc push`.
+Fluxo para um experimento:
 
-No Windows, se o `dvc.exe` for bloqueado pelo Controle de Aplicativo, use `uv run python -m dvc`.
+1. Altere um valor em `configs/params.yaml` (ex.: `n_estimators`).
+2. `uv run python -m dvc repro` treina de novo.
+3. `uv run python -m dvc metrics diff` compara com a versão anterior.
+4. Se o resultado for melhor: `git add configs/params.yaml dvc.lock metrics.json`, `git commit` e `uv run python -m dvc push`. **Sempre faça o `dvc push` junto com o `git push`**; sem ele, os colegas recebem as etiquetas novas, mas não os arquivos.
 
 ## Estado atual
 
