@@ -8,7 +8,7 @@ O alvo `Revenue` indica se uma sessão resultou em compra. O projeto contém an�
 
 ## Dados, notebooks e modelos
 
-O arquivo `data/online_shoppers_intention.csv` contém 12.330 sessões com atributos de navegação, duração, origem de tráfego e tipo de visitante. A variável alvo é desbalanceada: a maioria das sessões não resulta em compra.
+O arquivo `data/online_shoppers_intention.csv` (versionado pelo DVC; obtenha com `uv run dvc pull`) contém 12.330 sessões com atributos de navegação, duração, origem de tráfego e tipo de visitante. A variável alvo é desbalanceada: a maioria das sessões não resulta em compra.
 
 | Caminho | Conteúdo |
 | --- | --- |
@@ -46,7 +46,7 @@ uv run pytest
 uv run ruff check .
 ```
 
-No Windows, se o Controle de Aplicativo bloquear o `pytest.exe`, use `uv run python -m pytest`.
+No Windows, se o Controle de Aplicativo bloquear o `pytest.exe`, use `uv run python -m pytest`. Se o projeto estiver numa pasta do OneDrive, defina `UV_LINK_MODE=copy` antes do `uv sync`.
 
 ## Notebooks e MLflow
 
@@ -89,6 +89,37 @@ uv run python -m behavior_engineering.pipelines.preprocess   # gera data/process
 uv run python -m behavior_engineering.pipelines.train        # gera models/model.joblib e metrics.json
 ```
 
+## Dados e pipeline com DVC
+
+O dataset e as saídas do pipeline são versionados pelo [DVC](https://dvc.org/). O Git guarda só as "etiquetas" (`*.dvc`, `dvc.lock`), e os arquivos ficam no remote do [DagsHub](https://dagshub.com/zjooy/behavior-engineering).
+
+```
+data/online_shoppers_intention.csv ──► preprocess ──► data/processed/ ──► train ──► models/model.joblib
+                                                                                  └─► metrics.json
+```
+
+O `dvc.yaml` define os estágios. As dependências de cada um (dados, código e parâmetros de `configs/params.yaml`) determinam o que precisa rodar de novo.
+
+Configure a credencial do DagsHub uma vez por máquina. Ela fica em `.dvc/config.local`, fora do Git. O token está em *DagsHub → Settings → Tokens*:
+
+```bash
+uv run dvc remote modify origin --local auth basic
+uv run dvc remote modify origin --local user <seu-usuario>
+uv run dvc remote modify origin --local password <seu-token>
+```
+
+| Comando | O que faz |
+| --- | --- |
+| `uv run dvc pull` | Baixa do remote o dataset e as saídas da versão atual |
+| `uv run dvc repro` | Roda o pipeline, apenas os estágios cujas dependências mudaram |
+| `uv run dvc push` | Envia dados e saídas novos para o remote |
+| `uv run dvc metrics show` | Mostra as métricas atuais |
+| `uv run dvc params diff` / `uv run dvc metrics diff` | Compara parâmetros e métricas com o último commit |
+
+Fluxo para um experimento: altere `configs/params.yaml`, rode `dvc repro`, compare com `dvc metrics diff` e, se o resultado for bom, faça commit de `params.yaml`, `dvc.lock` e `metrics.json` e depois `dvc push`.
+
+No Windows, se o `dvc.exe` for bloqueado pelo Controle de Aplicativo, use `uv run python -m dvc`.
+
 ## Estado atual
 
-Concluído: análise exploratória, experimentos em notebooks e pipeline de treino em `src/` com testes básicos. Próximos passos: DVC (`dvc.yaml` com os estágios `preprocess` e `train`), Dockerfile, registro do modelo no MLflow Model Registry e API de inferência.
+Concluído: análise exploratória, experimentos em notebooks, pipeline de treino em `src/` com testes e pipeline DVC (`preprocess` → `train`). Próximos passos: Dockerfile, registro do modelo no MLflow Model Registry e API de inferência.

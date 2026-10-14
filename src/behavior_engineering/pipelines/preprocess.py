@@ -15,8 +15,9 @@ def main() -> None:
     train_df, test_df = split_train_test(raw_df, data.target, data.test_size, params.seed)
 
     data.processed_dir.mkdir(parents=True, exist_ok=True)
-    train_df.to_csv(data.processed_dir / "train.csv", index=False)
-    test_df.to_csv(data.processed_dir / "test.csv", index=False)
+    # LF fixo: o hash do DVC fica igual em qualquer sistema operacional
+    train_df.to_csv(data.processed_dir / "train.csv", index=False, lineterminator="\n")
+    test_df.to_csv(data.processed_dir / "test.csv", index=False, lineterminator="\n")
     print(f"Treino: {len(train_df)} linhas | Teste: {len(test_df)} linhas")
 
 
