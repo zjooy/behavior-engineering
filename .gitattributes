@@ -1,0 +1,3 @@
+# Quebras de linha fixas em LF: os hashes do DVC ficam iguais em qualquer sistema operacional
+* text=auto eol=lf
+*.joblib binary

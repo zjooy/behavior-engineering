@@ -5,3 +5,5 @@ __pycache__/
 .ruff_cache/
 artifacts/
 mlflow.db
+.env
+.pytest_cache/
