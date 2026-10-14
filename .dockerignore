@@ -1,0 +1,21 @@
+# Ambiente e caches locais
+.venv/
+__pycache__/
+*.pyc
+.ruff_cache/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Controle de versão e configurações locais
+.git/
+.env
+.claude/
+
+# Exploração e tracking local (não fazem parte da imagem)
+notebooks/
+mlflow.db
+artifacts/
+
+# Dados e modelos entram via DVC ou volume
+data/processed/
+models/

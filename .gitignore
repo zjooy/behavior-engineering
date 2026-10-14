@@ -5,3 +5,10 @@ __pycache__/
 .ruff_cache/
 artifacts/
 mlflow.db
+.env
+.pytest_cache/
+
+# Saídas do pipeline (serão rastreadas pelo DVC)
+data/processed/
+models/model.joblib
+metrics.json
