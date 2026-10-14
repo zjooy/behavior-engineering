@@ -1,0 +1,96 @@
+schema: '2.0'
+stages:
+  preprocess:
+    cmd: python -m behavior_engineering.pipelines.preprocess
+    deps:
+    - path: data/online_shoppers_intention.csv
+      hash: md5
+      md5: cc6ec1db03b4f10f8de52c56ff48b085
+      size: 1072063
+    - path: src/behavior_engineering/config.py
+      hash: md5
+      md5: c89020a11e3d9a53dfb257cd9b4719f3
+      size: 1555
+    - path: src/behavior_engineering/data/loader.py
+      hash: md5
+      md5: e8bbdbfe9acd3d83dcd7de9eddd22379
+      size: 978
+    - path: src/behavior_engineering/pipelines/preprocess.py
+      hash: md5
+      md5: e414c109cd3188f813a2dc066a925774
+      size: 1049
+    params:
+      configs/params.yaml:
+        data:
+          raw_path: data/online_shoppers_intention.csv
+          processed_dir: data/processed
+          target: Revenue
+          test_size: 0.2
+        seed: 42
+    outs:
+    - path: data/processed
+      hash: md5
+      md5: 800358f65b9fe9385f35d2e35264069b.dir
+      size: 1157186
+      nfiles: 2
+  train:
+    cmd: python -m behavior_engineering.pipelines.train
+    deps:
+    - path: data/processed
+      hash: md5
+      md5: 800358f65b9fe9385f35d2e35264069b.dir
+      size: 1157186
+      nfiles: 2
+    - path: src/behavior_engineering/config.py
+      hash: md5
+      md5: c89020a11e3d9a53dfb257cd9b4719f3
+      size: 1555
+    - path: src/behavior_engineering/features
+      hash: md5
+      md5: c8fbe09ab7e36f68aaf6fa3424f0b33f.dir
+      size: 2018
+      nfiles: 4
+    - path: src/behavior_engineering/models
+      hash: md5
+      md5: c00cf17fcd060cc5692e8ca7718da617.dir
+      size: 7182
+      nfiles: 6
+    - path: src/behavior_engineering/pipelines/train.py
+      hash: md5
+      md5: 41f6849bcb773b87e4a92005817c2546
+      size: 1382
+    params:
+      configs/params.yaml:
+        features:
+          drop:
+          - Weekend
+          - Region
+          - Browser
+          - OperatingSystems
+          categorical:
+          - Month
+          - TrafficType
+          - VisitorType
+          ohe_min_frequency: 0.01
+        model:
+          n_estimators: 177
+          learning_rate: 0.02929080317644553
+          max_depth: 4
+          subsample: 0.8134838044580179
+          colsample_bytree: 0.956810393362548
+          scale_pos_weight: 5.45
+          eval_metric: aucpr
+          tree_method: hist
+        seed: 42
+        train:
+          model_path: models/model.joblib
+          metrics_path: metrics.json
+    outs:
+    - path: metrics.json
+      hash: md5
+      md5: 849c4591aabfd8924157df09cfd100d0
+      size: 189
+    - path: models/model.joblib
+      hash: md5
+      md5: ad4c7ba5504be6c3b716d5f2405d2f18
+      size: 292919
