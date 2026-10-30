@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
@@ -370,7 +370,6 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "dvc" },
-    { name = "fastapi" },
     { name = "joblib" },
     { name = "mlflow" },
     { name = "numpy" },
@@ -400,7 +399,6 @@ notebook = [
 [package.metadata]
 requires-dist = [
     { name = "dvc", specifier = ">=3.60" },
-    { name = "fastapi", specifier = ">=0.142.1" },
     { name = "joblib", specifier = ">=1.6.0" },
     { name = "mlflow", specifier = ">=3.16.1" },
     { name = "numpy", specifier = ">=2.5.3" },
