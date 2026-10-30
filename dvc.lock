@@ -9,8 +9,8 @@ stages:
       size: 1072063
     - path: src/behavior_engineering/config.py
       hash: md5
-      md5: 17c443074efadeef96f4679f17a1cd40
-      size: 1563
+      md5: 3f5d8423c39c171b5dd456c4c39acd9a
+      size: 1632
     - path: src/behavior_engineering/data/loader.py
       hash: md5
       md5: e8bbdbfe9acd3d83dcd7de9eddd22379
@@ -47,8 +47,8 @@ stages:
       nfiles: 2
     - path: src/behavior_engineering/config.py
       hash: md5
-      md5: 17c443074efadeef96f4679f17a1cd40
-      size: 1563
+      md5: 3f5d8423c39c171b5dd456c4c39acd9a
+      size: 1632
     - path: src/behavior_engineering/data/loader.py
       hash: md5
       md5: e8bbdbfe9acd3d83dcd7de9eddd22379
@@ -60,8 +60,8 @@ stages:
       nfiles: 2
     - path: src/behavior_engineering/models
       hash: md5
-      md5: 09f1f672d58f04e5cc87e2a44a88f39d.dir
-      size: 5908
+      md5: b3c2537a1848f16fe9980b4240547920.dir
+      size: 7403
       nfiles: 4
     - path: src/behavior_engineering/pipelines/train.py
       hash: md5
