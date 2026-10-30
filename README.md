@@ -241,7 +241,7 @@ docker run --rm --network host \
   behavior-engineering
 ```
 
-Sem Git na imagem, o run fica com `git_dirty=unknown` e sem `mlflow.source.git.commit`. Se o UID do seu usuário não for 1000, construa com `--build-arg APP_UID=$(id -u) --build-arg APP_GID=$(id -g)`.
+Sem Git na imagem, o run fica com `git_dirty=unknown` e sem `mlflow.source.git.commit`. A imagem roda com o UID 1000: se o seu usuário tiver outro UID, ajuste as permissões de `data/` e `models/`.
 
 ## Estado atual
 
