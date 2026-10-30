@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     mlflow_enabled: bool = True
     mlflow_tracking_uri: str = "http://127.0.0.1:5000"
     mlflow_experiment_name: str = "Online_Shoppers_Base"
+    mlflow_registered_model_name: str = "Online_Shoppers_Classifier"
 
 
 class DataParams(BaseModel):

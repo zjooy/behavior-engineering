@@ -4,11 +4,13 @@ import mlflow
 import pandas as pd
 import pytest
 import yaml
+from mlflow import MlflowClient
 from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
 
 from behavior_engineering.config import Settings, load_params
 from behavior_engineering.models.tracking import (
+    CHAMPION_ALIAS,
     UNKNOWN,
     TrainingTracker,
     flatten_params,
@@ -73,6 +75,25 @@ def test_tracker_logs_params_metrics_tags_and_model(
         experiment_ids=[run.info.experiment_id], output_format="list"
     )
     assert len(mlflow.sklearn.load_model(logged_models[0].model_uri).predict(features)) == 4
+
+
+def test_tracker_promotes_only_versions_that_beat_the_champion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    tracking_uri = f"sqlite:///{tmp_path / 'mlflow.db'}"
+    settings = Settings(mlflow_tracking_uri=tracking_uri, mlflow_experiment_name="test")
+    pipeline, features = make_fitted_pipeline()
+    tracker = TrainingTracker(settings)
+    champions = []
+
+    for pr_auc in [0.75, 0.75, 0.70, 0.80]:
+        with tracker.run(PROCESSED_DIR):
+            tracker.log(load_params(PARAMS_PATH), {"test_pr_auc": pr_auc}, pipeline, features)
+        registered_model = MlflowClient().get_registered_model(tracker.registered_model_name)
+        champions.append(registered_model.aliases[CHAMPION_ALIAS])
+
+    assert champions == [1, 1, 1, 4]
 
 
 def test_disabled_tracker_does_not_open_run() -> None:

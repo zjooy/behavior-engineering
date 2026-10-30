@@ -1,5 +1,6 @@
 """Registro do treino do pipeline no MLflow, ligado às versões do Git e do DVC."""
 
+import math
 import os
 import subprocess
 from collections.abc import Iterator
@@ -10,12 +11,15 @@ from typing import Any
 import mlflow
 import pandas as pd
 import yaml
+from mlflow import MlflowClient
 from sklearn.pipeline import Pipeline
 
 from behavior_engineering.config import Params, Settings
 
 RUN_NAME = "XGBoost_Pipeline"
 UNKNOWN = "unknown"
+CHAMPION_ALIAS = "champion"
+PROMOTION_METRIC = "test_pr_auc"
 # Sem o XGBoost nesta lista, o formato padrão (skops) recusa salvar o modelo
 SKOPS_TRUSTED_TYPES = ["xgboost.core.Booster", "xgboost.sklearn.XGBClassifier"]
 
@@ -62,6 +66,7 @@ class TrainingTracker:
         self.enabled = settings.mlflow_enabled
         self.tracking_uri = settings.mlflow_tracking_uri
         self.experiment_name = settings.mlflow_experiment_name
+        self.registered_model_name = settings.mlflow_registered_model_name
 
     @contextmanager
     def run(self, processed_dir: Path) -> Iterator[None]:
@@ -84,14 +89,35 @@ class TrainingTracker:
         pipeline: Pipeline,
         input_example: pd.DataFrame,
     ) -> None:
-        """Registra parâmetros, métricas e o modelo no run aberto."""
+        """Registra parâmetros, métricas e o modelo no run aberto, e promove se for o melhor."""
         if not self.enabled:
             return
         mlflow.log_params(flatten_params(params.model_dump(mode="json")))
         mlflow.log_metrics(metrics)
-        mlflow.sklearn.log_model(
+        model_info = mlflow.sklearn.log_model(
             pipeline,
             name="model",
             input_example=input_example,
             skops_trusted_types=SKOPS_TRUSTED_TYPES,
+            registered_model_name=self.registered_model_name,
         )
+        self._promote_if_better(model_info.registered_model_version, metrics[PROMOTION_METRIC])
+
+    def _champion_metric(self, client: MlflowClient) -> float:
+        """Lê a métrica de promoção da versão campeã; sem campeã, qualquer versão a supera."""
+        registered_model = client.get_registered_model(self.registered_model_name)
+        version = registered_model.aliases.get(CHAMPION_ALIAS)
+        if version is None:
+            return -math.inf
+        run_id = client.get_model_version(self.registered_model_name, version).run_id
+        return client.get_run(run_id).data.metrics.get(PROMOTION_METRIC, -math.inf)
+
+    def _promote_if_better(self, version: int, metric: float) -> None:
+        """Aponta o alias da campeã para a versão, se ela superar a atual na métrica."""
+        client = MlflowClient()
+        champion_metric = self._champion_metric(client)
+        if metric <= champion_metric:
+            print(f"Versão {version} não promovida: {metric:.4f} <= {champion_metric:.4f}")
+            return
+        client.set_registered_model_alias(self.registered_model_name, CHAMPION_ALIAS, version)
+        print(f"Versão {version} promovida a {CHAMPION_ALIAS}: {metric:.4f}")
