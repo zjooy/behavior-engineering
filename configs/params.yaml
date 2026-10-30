@@ -22,6 +22,7 @@ model:
   scale_pos_weight: 5.45
   eval_metric: aucpr
   tree_method: hist
+  device: cpu
 
 train:
   model_path: models/model.joblib

@@ -18,9 +18,8 @@ class Trainer:
         preprocessor: ColumnTransformer,
         model_params: dict[str, Any],
         seed: int,
-        device: str = "cpu",
     ) -> None:
-        classifier = XGBClassifier(**model_params, random_state=seed, device=device)
+        classifier = XGBClassifier(**model_params, random_state=seed)
         self.pipeline = Pipeline(steps=[("preprocessor", preprocessor), ("classifier", classifier)])
 
     def fit(self, features: pd.DataFrame, target: pd.Series) -> Pipeline:

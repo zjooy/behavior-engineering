@@ -95,14 +95,27 @@ O treino do modelo campeão também existe como código Python no pacote `behavi
 | `features/preprocessor.py` | `build_preprocessor`: descarta colunas de ruído e aplica one-hot nas categóricas |
 | `models/trainer.py` | `Trainer`: monta e ajusta o `Pipeline` (pré-processador + XGBoost) e salva com joblib |
 | `models/evaluator.py` | `Evaluator`: acurácia, F1, precisão, recall e PR-AUC |
+| `models/tracking.py` | `TrainingTracker`: registra no MLflow parâmetros, métricas, modelo e as versões do Git e dos dados |
 | `pipelines/preprocess.py`, `pipelines/train.py` | Pontos de entrada dos estágios `preprocess` e `train` |
 
-Seeds, colunas e hiperparâmetros (os melhores do estudo Optuna) ficam em `configs/params.yaml`. Configurações da máquina (dispositivo, MLflow) ficam no `.env`:
+Seeds, colunas, hiperparâmetros (os melhores do estudo Optuna) e o dispositivo de treino (`model.device`) ficam em `configs/params.yaml`. As configurações do MLflow ficam no `.env`:
 
 ```bash
 uv run python -m behavior_engineering.pipelines.preprocess   # gera data/processed/{train,test}.csv
 uv run python -m behavior_engineering.pipelines.train        # gera models/model.joblib e metrics.json
 ```
+
+### Registro no MLflow
+
+O estágio `train` cria um run `XGBoost_Pipeline` no experimento de `MLFLOW_EXPERIMENT_NAME`, com os parâmetros de `configs/params.yaml`, as métricas, o modelo e estas tags:
+
+| Tag | Conteúdo |
+| --- | --- |
+| `mlflow.source.git.commit` | Commit atual, registrado pelo próprio MLflow. Com `git_dirty=true`, é o commit anterior ao experimento, pois o `dvc repro` roda antes do `git commit` |
+| `git_dirty` | `true` se havia alterações locais no momento do treino |
+| `data_md5` | Hash de `data/processed` no `dvc.lock`. Só é confiável via `dvc repro`, que atualiza o lock antes do treino |
+
+O servidor MLflow precisa estar no ar ([Notebooks e MLflow](#notebooks-e-mlflow)); caso contrário, o treino falha antes de começar. Para treinar sem registrar, defina `MLFLOW_ENABLED=false` no `.env`.
 
 ## Dados e pipeline com DVC
 

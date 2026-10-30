@@ -9,8 +9,8 @@ stages:
       size: 1072063
     - path: src/behavior_engineering/config.py
       hash: md5
-      md5: c89020a11e3d9a53dfb257cd9b4719f3
-      size: 1555
+      md5: 17c443074efadeef96f4679f17a1cd40
+      size: 1563
     - path: src/behavior_engineering/data/loader.py
       hash: md5
       md5: e8bbdbfe9acd3d83dcd7de9eddd22379
@@ -19,6 +19,10 @@ stages:
       hash: md5
       md5: e414c109cd3188f813a2dc066a925774
       size: 1049
+    - path: src/behavior_engineering/reproducibility.py
+      hash: md5
+      md5: bb5678979131024cbcf4ef98334091d0
+      size: 219
     params:
       configs/params.yaml:
         data:
@@ -43,8 +47,12 @@ stages:
       nfiles: 2
     - path: src/behavior_engineering/config.py
       hash: md5
-      md5: c89020a11e3d9a53dfb257cd9b4719f3
-      size: 1555
+      md5: 17c443074efadeef96f4679f17a1cd40
+      size: 1563
+    - path: src/behavior_engineering/data/loader.py
+      hash: md5
+      md5: e8bbdbfe9acd3d83dcd7de9eddd22379
+      size: 978
     - path: src/behavior_engineering/features
       hash: md5
       md5: efde6661f1231cdbebf47e3569d351be.dir
@@ -52,13 +60,17 @@ stages:
       nfiles: 2
     - path: src/behavior_engineering/models
       hash: md5
-      md5: dee064883184bf4647b99bee6459e902.dir
-      size: 2430
-      nfiles: 3
+      md5: 09f1f672d58f04e5cc87e2a44a88f39d.dir
+      size: 5908
+      nfiles: 4
     - path: src/behavior_engineering/pipelines/train.py
       hash: md5
-      md5: 41f6849bcb773b87e4a92005817c2546
-      size: 1382
+      md5: 4a0b32ee6be86cea76b7b2f6a6e8a532
+      size: 1610
+    - path: src/behavior_engineering/reproducibility.py
+      hash: md5
+      md5: bb5678979131024cbcf4ef98334091d0
+      size: 219
     params:
       configs/params.yaml:
         features:
@@ -81,6 +93,7 @@ stages:
           scale_pos_weight: 5.45
           eval_metric: aucpr
           tree_method: hist
+          device: cpu
         seed: 42
         train:
           model_path: models/model.joblib
@@ -88,9 +101,9 @@ stages:
     outs:
     - path: metrics.json
       hash: md5
-      md5: 849c4591aabfd8924157df09cfd100d0
+      md5: f783efe5f202177bca964b24919a435a
       size: 189
     - path: models/model.joblib
       hash: md5
-      md5: ad4c7ba5504be6c3b716d5f2405d2f18
-      size: 292919
+      md5: 85ce5a14025b289c6370726342092649
+      size: 292693
