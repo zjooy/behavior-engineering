@@ -11,6 +11,11 @@ __pycache__/
 .env
 .claude/
 
+# Credenciais e cache do DVC
+.dvc/config.local
+.dvc/cache/
+.dvc/tmp/
+
 # Exploração e tracking local (não fazem parte da imagem)
 notebooks/
 mlflow.db
@@ -18,4 +23,5 @@ artifacts/
 
 # Dados e modelos entram via DVC ou volume
 data/processed/
+data/*.csv
 models/

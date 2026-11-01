@@ -4,7 +4,7 @@
 
 ## Objetivo
 
-O alvo `Revenue` indica se uma sessão resultou em compra. O projeto contém análise exploratória, um modelo baseline e experimentos de classificação registrados com MLflow. FastAPI e Pydantic estão nas dependências, mas uma API de inferência ainda não foi implementada.
+O alvo `Revenue` indica se uma sessão resultou em compra. O projeto contém análise exploratória, um modelo baseline e experimentos de classificação registrados com MLflow.
 
 ## Dados, notebooks e modelos
 
@@ -95,14 +95,35 @@ O treino do modelo campeão também existe como código Python no pacote `behavi
 | `features/preprocessor.py` | `build_preprocessor`: descarta colunas de ruído e aplica one-hot nas categóricas |
 | `models/trainer.py` | `Trainer`: monta e ajusta o `Pipeline` (pré-processador + XGBoost) e salva com joblib |
 | `models/evaluator.py` | `Evaluator`: acurácia, F1, precisão, recall e PR-AUC |
+| `models/tracking.py` | `TrainingTracker`: registra no MLflow parâmetros, métricas, modelo e as versões do Git e dos dados; cria a versão no Model Registry e promove a melhor |
 | `pipelines/preprocess.py`, `pipelines/train.py` | Pontos de entrada dos estágios `preprocess` e `train` |
 
-Seeds, colunas e hiperparâmetros (os melhores do estudo Optuna) ficam em `configs/params.yaml`. Configurações da máquina (dispositivo, MLflow) ficam no `.env`:
+Seeds, colunas, hiperparâmetros (os melhores do estudo Optuna) e o dispositivo de treino (`model.device`) ficam em `configs/params.yaml`. As configurações do MLflow ficam no `.env`:
 
 ```bash
 uv run python -m behavior_engineering.pipelines.preprocess   # gera data/processed/{train,test}.csv
 uv run python -m behavior_engineering.pipelines.train        # gera models/model.joblib e metrics.json
 ```
+
+### Registro no MLflow
+
+O estágio `train` cria um run `XGBoost_Pipeline` no experimento de `MLFLOW_EXPERIMENT_NAME`, com os parâmetros de `configs/params.yaml`, as métricas, o modelo e estas tags:
+
+| Tag | Conteúdo |
+| --- | --- |
+| `mlflow.source.git.commit` | Commit atual, registrado pelo próprio MLflow. Com `git_dirty=true`, é o commit anterior ao experimento, pois o `dvc repro` roda antes do `git commit` |
+| `git_dirty` | `true` se havia alterações locais no momento do treino |
+| `data_md5` | Hash de `data/processed` no `dvc.lock`. Só é confiável via `dvc repro`, que atualiza o lock antes do treino |
+
+Cada treino registrado também cria uma nova versão do modelo `MLFLOW_REGISTERED_MODEL_NAME` no Model Registry. A versão recebe o alias `champion` só se o `test_pr_auc` dela superar o da campeã atual; a primeira versão é promovida automaticamente. Para carregar a campeã:
+
+```python
+mlflow.sklearn.load_model("models:/Online_Shoppers_Classifier@champion")
+```
+
+O `dvc repro` pula o treino quando nada mudou e, nesse caso, nenhuma versão é criada. Para treinar e registrar mesmo assim: `uv run python -m dvc repro --force --single-item train`.
+
+O servidor MLflow precisa estar no ar ([Notebooks e MLflow](#notebooks-e-mlflow)); caso contrário, o treino falha antes de começar. Para treinar sem registrar, defina `MLFLOW_ENABLED=false` no `.env`.
 
 ## Dados e pipeline com DVC
 
@@ -176,6 +197,52 @@ Fluxo para um experimento:
 3. `uv run python -m dvc metrics diff` compara com a versão anterior.
 4. Se o resultado for melhor: `git add configs/params.yaml dvc.lock metrics.json`, `git commit` e `uv run python -m dvc push`. **Sempre faça o `dvc push` junto com o `git push`**; sem ele, os colegas recebem as etiquetas novas, mas não os arquivos.
 
+## Docker
+
+O `Dockerfile` tem dois estágios: o primeiro instala as dependências de produção com o uv e o segundo copia só o resultado para a imagem final, que roda sem root e não contém uv, dados, modelos nem credenciais.
+
+```bash
+docker build -t behavior-engineering .
+```
+
+Dados e modelos entram por volume. Para baixá-los do remote, monte a credencial do DVC somente para leitura (ela não fica na imagem):
+
+```bash
+docker run --rm \
+  -v "$PWD/.dvc/config.local:/app/.dvc/config.local:ro" \
+  -v "$PWD/data:/app/data" \
+  -v "$PWD/models:/app/models" \
+  behavior-engineering dvc pull
+```
+
+O comando padrão da imagem é `dvc repro`. Para rodar o pipeline sem MLflow e copiar para fora o que fica fora dos volumes:
+
+```bash
+docker run --name behavior-train \
+  -e MLFLOW_ENABLED=false \
+  -v "$PWD/data:/app/data" \
+  -v "$PWD/models:/app/models" \
+  behavior-engineering
+
+docker cp behavior-train:/app/metrics.json .
+docker cp behavior-train:/app/dvc.lock .
+docker rm behavior-train
+```
+
+Não monte `metrics.json` nem `dvc.lock` como arquivos: o DVC precisa removê-los e falha com `Device or resource busy`.
+
+Para registrar no MLflow (no Linux), com o servidor da seção [Notebooks e MLflow](#notebooks-e-mlflow) no ar, use a rede do host e monte `artifacts/` **no mesmo caminho absoluto** do host, pois é nesse caminho que o cliente grava os artefatos:
+
+```bash
+docker run --rm --network host \
+  -v "$PWD/data:/app/data" \
+  -v "$PWD/models:/app/models" \
+  -v "$PWD/artifacts:$PWD/artifacts" \
+  behavior-engineering
+```
+
+Sem Git na imagem, o run fica com `git_dirty=unknown` e sem `mlflow.source.git.commit`. A imagem roda com o UID 1000: se o seu usuário tiver outro UID, ajuste as permissões de `data/` e `models/`.
+
 ## Estado atual
 
-Concluído: análise exploratória, experimentos em notebooks, pipeline de treino em `src/` com testes e pipeline DVC (`preprocess` → `train`). Próximos passos: Dockerfile, registro do modelo no MLflow Model Registry e API de inferência.
+Concluído: análise exploratória, experimentos em notebooks, pipeline de treino em `src/` com testes, pipeline DVC (`preprocess` → `train`), Dockerfile e registro e promoção do modelo no MLflow Model Registry.

@@ -5,6 +5,7 @@ stages:
       - data/online_shoppers_intention.csv
       - src/behavior_engineering/pipelines/preprocess.py
       - src/behavior_engineering/data/loader.py
+      - src/behavior_engineering/reproducibility.py
       - src/behavior_engineering/config.py
     params:
       - configs/params.yaml:
@@ -18,6 +19,8 @@ stages:
     deps:
       - data/processed
       - src/behavior_engineering/pipelines/train.py
+      - src/behavior_engineering/data/loader.py
+      - src/behavior_engineering/reproducibility.py
       - src/behavior_engineering/features
       - src/behavior_engineering/models
       - src/behavior_engineering/config.py
