@@ -2,6 +2,49 @@
 
 > Projeto de machine learning para estimar a intenção de compra em sessões de e-commerce com o conjunto **Online Shoppers Purchasing Intention**.
 
+## Entrega – Tech Challenge Fase 2
+
+| | |
+| --- | --- |
+| 🎥 **Vídeo (método STAR)** | https://youtu.be/ZogRQuHj-mg |
+| 📦 **Dados e pipeline (DVC)** | https://dagshub.com/zjooy/behavior-engineering |
+| 👥 **Integrantes** | Joyce Braz, Lucas Silve, Gabriel Rabat |
+
+**Problema:** uma empresa de e-commerce quer identificar a propensão de compra de um usuário a partir do comportamento de navegação. O foco do desafio é a engenharia de ML em volta de um modelo clássico de classificação.
+
+**Resultado:** pipeline XGBoost sobre scikit-learn, avaliado no conjunto de teste (20%, estratificado). Como só cerca de 15% das sessões terminam em compra, a métrica principal é o PR-AUC.
+
+| PR-AUC | Recall | Precisão | F1 | Acurácia |
+| --- | --- | --- | --- | --- |
+| **0,749** | 0,835 | 0,533 | 0,650 | 0,861 |
+
+### Arquitetura
+
+```mermaid
+flowchart LR
+    subgraph DVC["DVC (dvc.yaml) · remote no DagsHub"]
+        raw[(online_shoppers_intention.csv)] --> pre[preprocess] --> proc[(data/processed)]
+        proc --> train[train] --> model[(models/model.joblib)]
+        train --> met[(metrics.json)]
+    end
+    params[configs/params.yaml] -.-> pre & train
+    train -- params, métricas, modelo --> mlflow[MLflow Tracking]
+    mlflow --> reg[Model Registry<br/>alias champion]
+    docker[[Docker: dvc repro]] -.-> DVC
+```
+
+| Requisito do enunciado | Onde está |
+| --- | --- |
+| Clean Code, POO e type hints | [`src/behavior_engineering/`](src/behavior_engineering), testes em [`tests/`](tests), Ruff + pre-commit |
+| Dependências prod/dev e lock file | [`pyproject.toml`](pyproject.toml) e [`uv.lock`](uv.lock) (uv, aceito como alternativa ao Poetry) |
+| `.env.example`, `.gitignore`, `.dockerignore` | Na raiz do repositório |
+| Pipeline DVC | [`dvc.yaml`](dvc.yaml), [`dvc.lock`](dvc.lock) e [`configs/params.yaml`](configs/params.yaml) |
+| Dockerfile | [`Dockerfile`](Dockerfile) (ver [Docker](#docker)) |
+| MLflow Tracking e Model Registry | [`models/tracking.py`](src/behavior_engineering/models/tracking.py) (ver [Registro no MLflow](#registro-no-mlflow)) |
+| Seeds fixas | `seed` em [`configs/params.yaml`](configs/params.yaml), aplicada ao split, ao modelo e ao NumPy |
+
+Reprodutibilidade: com o mesmo ambiente (por exemplo, a imagem Docker), o pipeline gera exatamente o mesmo modelo. Entre máquinas com sistema ou processador diferentes, o XGBoost pode variar na terceira casa decimal (ex.: PR-AUC 0,749 vs 0,750).
+
 ## Objetivo
 
 O alvo `Revenue` indica se uma sessão resultou em compra. O projeto contém análise exploratória, um modelo baseline e experimentos de classificação registrados com MLflow.
