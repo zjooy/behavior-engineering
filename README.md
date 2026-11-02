@@ -45,6 +45,19 @@ flowchart LR
 
 Reprodutibilidade: com o mesmo ambiente (por exemplo, a imagem Docker), o pipeline gera exatamente o mesmo modelo. Entre máquinas com sistema ou processador diferentes, o XGBoost pode variar na terceira casa decimal (ex.: PR-AUC 0,749 vs 0,750).
 
+### Rodar sem conta no DagsHub
+
+O repositório no DagsHub é público, mas o DagsHub exige login para baixar dados via DVC. Para avaliar o pipeline sem criar conta, recupere o dataset do primeiro commit do Git: ele é idêntico, byte a byte, à versão rastreada pelo DVC (mesmo hash MD5 do `.dvc`). Depois, gere os splits e o modelo com o próprio DVC:
+
+```bash
+git show 056b166:data/online_shoppers_intention.csv > data/online_shoppers_intention.csv
+uv sync
+uv run python -m dvc status      # o dataset não aparece como alterado: o hash bate
+MLFLOW_ENABLED=false uv run python -m dvc repro
+```
+
+No PowerShell, defina a variável antes: `$env:MLFLOW_ENABLED="false"`. Para registrar no MLflow, suba o servidor ([Notebooks e MLflow](#notebooks-e-mlflow)) e rode o `dvc repro` sem essa variável.
+
 ## Objetivo
 
 O alvo `Revenue` indica se uma sessão resultou em compra. O projeto contém análise exploratória, um modelo baseline e experimentos de classificação registrados com MLflow.
@@ -185,8 +198,8 @@ Faça antes a seção [Ambiente](#ambiente): o `uv` precisa estar funcionando e 
 
 **1. Crie sua conta no DagsHub e peça acesso ao repositório**
 
-- Crie a conta em [dagshub.com](https://dagshub.com/) (dá para entrar com a conta do GitHub).
-- Peça ao dono do repositório (`zjooy`) para adicioná-lo como colaborador em *DagsHub → behavior-engineering → Settings → Collaborators*. Sem isso, o `dvc push` é recusado.
+- Crie a conta em [dagshub.com](https://dagshub.com/) (dá para entrar com a conta do GitHub). Mesmo com o repositório público, o DagsHub exige login para o `dvc pull`. Sem conta, use o caminho de [Rodar sem conta no DagsHub](#rodar-sem-conta-no-dagshub).
+- Para enviar dados (`dvc push`), peça ao dono do repositório (`zjooy`) para adicioná-lo como colaborador em *DagsHub → behavior-engineering → Settings → Collaborators*.
 
 **2. Gere um token de acesso**
 
@@ -220,7 +233,7 @@ Pronto. O arquivo `data/online_shoppers_intention.csv` aparece na pasta `data/`.
 | `uv` não é reconhecido como comando | A pasta do uv não está no PATH. Use `python -m uv ...` no lugar de `uv ...` ou adicione a pasta ao PATH (veja [Ambiente](#ambiente)) |
 | `A sintaxe do nome do arquivo... está incorreta` | O comando de PowerShell foi digitado no cmd. Use um terminal cujo prompt começa com `PS` |
 | `dvc.exe` ou `pytest.exe` bloqueado pelo Windows | O Controle de Aplicativo bloqueia o executável. Use a forma `python -m dvc` / `python -m pytest`, como nos exemplos acima |
-| `401 Unauthorized` / `403 Forbidden` no push ou pull | Token errado ou expirado (refaça o passo 3) ou falta acesso de colaborador (passo 1) |
+| `401 Unauthorized` / `403 Forbidden` no push ou pull | Credencial não configurada, token errado ou expirado (refaça o passo 3) ou, no push, falta acesso de colaborador (passo 1). Sem conta, veja [Rodar sem conta no DagsHub](#rodar-sem-conta-no-dagshub) |
 | `failed to hardlink` / `Acesso negado` no `uv sync` | Projeto dentro do OneDrive. Rode `$env:UV_LINK_MODE="copy"` (PowerShell) antes do `uv sync` |
 
 ### Uso no dia a dia
