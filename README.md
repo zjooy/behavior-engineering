@@ -2,6 +2,62 @@
 
 > Projeto de machine learning para estimar a intenção de compra em sessões de e-commerce com o conjunto **Online Shoppers Purchasing Intention**.
 
+## Entrega – Tech Challenge Fase 2
+
+| | |
+| --- | --- |
+| 🎥 **Vídeo (método STAR)** | https://youtu.be/ZogRQuHj-mg |
+| 📦 **Dados e pipeline (DVC)** | https://dagshub.com/zjooy/behavior-engineering |
+| 👥 **Integrantes** | Joyce Braz, Lucas Silva, Gabriel Rabat |
+
+**Problema:** uma empresa de e-commerce quer identificar a propensão de compra de um usuário a partir do comportamento de navegação. O foco do desafio é a engenharia de ML em volta de um modelo clássico de classificação.
+
+**Resultado:** pipeline XGBoost sobre scikit-learn, avaliado no conjunto de teste (20%, estratificado). Como só cerca de 15% das sessões terminam em compra, a métrica principal é o PR-AUC.
+
+| PR-AUC | Recall | Precisão | F1 | Acurácia |
+| --- | --- | --- | --- | --- |
+| **0,749** | 0,835 | 0,533 | 0,650 | 0,861 |
+
+### Arquitetura
+
+```mermaid
+flowchart LR
+    subgraph DVC["DVC (dvc.yaml) · remote no DagsHub"]
+        raw[(online_shoppers_intention.csv)] --> pre[preprocess] --> proc[(data/processed)]
+        proc --> train[train] --> model[(models/model.joblib)]
+        train --> met[(metrics.json)]
+    end
+    params[configs/params.yaml] -.-> pre & train
+    train -- params, métricas, modelo --> mlflow[MLflow Tracking]
+    mlflow --> reg[Model Registry<br/>alias champion]
+    docker[[Docker: dvc repro]] -.-> DVC
+```
+
+| Requisito do enunciado | Onde está |
+| --- | --- |
+| Clean Code, POO e type hints | [`src/behavior_engineering/`](src/behavior_engineering), testes em [`tests/`](tests), Ruff + pre-commit |
+| Dependências prod/dev e lock file | [`pyproject.toml`](pyproject.toml) e [`uv.lock`](uv.lock) (uv, aceito como alternativa ao Poetry) |
+| `.env.example`, `.gitignore`, `.dockerignore` | Na raiz do repositório |
+| Pipeline DVC | [`dvc.yaml`](dvc.yaml), [`dvc.lock`](dvc.lock) e [`configs/params.yaml`](configs/params.yaml) |
+| Dockerfile | [`Dockerfile`](Dockerfile) (ver [Docker](#docker)) |
+| MLflow Tracking e Model Registry | [`models/tracking.py`](src/behavior_engineering/models/tracking.py) (ver [Registro no MLflow](#registro-no-mlflow)) |
+| Seeds fixas | `seed` em [`configs/params.yaml`](configs/params.yaml), aplicada ao split, ao modelo e ao NumPy |
+
+Reprodutibilidade: com o mesmo ambiente (por exemplo, a imagem Docker), o pipeline gera exatamente o mesmo modelo. Entre máquinas com sistema ou processador diferentes, o XGBoost pode variar na terceira casa decimal (ex.: PR-AUC 0,749 vs 0,750).
+
+### Rodar sem conta no DagsHub
+
+O repositório no DagsHub é público, mas o DagsHub exige login para baixar dados via DVC. Para avaliar o pipeline sem criar conta, recupere o dataset do primeiro commit do Git: ele é idêntico, byte a byte, à versão rastreada pelo DVC (mesmo hash MD5 do `.dvc`). Depois, gere os splits e o modelo com o próprio DVC:
+
+```bash
+git show 056b166:data/online_shoppers_intention.csv > data/online_shoppers_intention.csv
+uv sync
+uv run python -m dvc status      # o dataset não aparece como alterado: o hash bate
+MLFLOW_ENABLED=false uv run python -m dvc repro
+```
+
+No PowerShell, defina a variável antes: `$env:MLFLOW_ENABLED="false"`. Para registrar no MLflow, suba o servidor ([Notebooks e MLflow](#notebooks-e-mlflow)) e rode o `dvc repro` sem essa variável.
+
 ## Objetivo
 
 O alvo `Revenue` indica se uma sessão resultou em compra. O projeto contém análise exploratória, um modelo baseline e experimentos de classificação registrados com MLflow.
@@ -142,8 +198,8 @@ Faça antes a seção [Ambiente](#ambiente): o `uv` precisa estar funcionando e 
 
 **1. Crie sua conta no DagsHub e peça acesso ao repositório**
 
-- Crie a conta em [dagshub.com](https://dagshub.com/) (dá para entrar com a conta do GitHub).
-- Peça ao dono do repositório (`zjooy`) para adicioná-lo como colaborador em *DagsHub → behavior-engineering → Settings → Collaborators*. Sem isso, o `dvc push` é recusado.
+- Crie a conta em [dagshub.com](https://dagshub.com/) (dá para entrar com a conta do GitHub). Mesmo com o repositório público, o DagsHub exige login para o `dvc pull`. Sem conta, use o caminho de [Rodar sem conta no DagsHub](#rodar-sem-conta-no-dagshub).
+- Para enviar dados (`dvc push`), peça ao dono do repositório (`zjooy`) para adicioná-lo como colaborador em *DagsHub → behavior-engineering → Settings → Collaborators*.
 
 **2. Gere um token de acesso**
 
@@ -177,7 +233,7 @@ Pronto. O arquivo `data/online_shoppers_intention.csv` aparece na pasta `data/`.
 | `uv` não é reconhecido como comando | A pasta do uv não está no PATH. Use `python -m uv ...` no lugar de `uv ...` ou adicione a pasta ao PATH (veja [Ambiente](#ambiente)) |
 | `A sintaxe do nome do arquivo... está incorreta` | O comando de PowerShell foi digitado no cmd. Use um terminal cujo prompt começa com `PS` |
 | `dvc.exe` ou `pytest.exe` bloqueado pelo Windows | O Controle de Aplicativo bloqueia o executável. Use a forma `python -m dvc` / `python -m pytest`, como nos exemplos acima |
-| `401 Unauthorized` / `403 Forbidden` no push ou pull | Token errado ou expirado (refaça o passo 3) ou falta acesso de colaborador (passo 1) |
+| `401 Unauthorized` / `403 Forbidden` no push ou pull | Credencial não configurada, token errado ou expirado (refaça o passo 3) ou, no push, falta acesso de colaborador (passo 1). Sem conta, veja [Rodar sem conta no DagsHub](#rodar-sem-conta-no-dagshub) |
 | `failed to hardlink` / `Acesso negado` no `uv sync` | Projeto dentro do OneDrive. Rode `$env:UV_LINK_MODE="copy"` (PowerShell) antes do `uv sync` |
 
 ### Uso no dia a dia
