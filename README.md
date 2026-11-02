@@ -8,7 +8,7 @@
 | --- | --- |
 | 🎥 **Vídeo (método STAR)** | https://youtu.be/ZogRQuHj-mg |
 | 📦 **Dados e pipeline (DVC)** | https://dagshub.com/zjooy/behavior-engineering |
-| 👥 **Integrantes** | Joyce Braz, Lucas Silve, Gabriel Rabat |
+| 👥 **Integrantes** | Joyce Braz, Lucas Silva, Gabriel Rabat |
 
 **Problema:** uma empresa de e-commerce quer identificar a propensão de compra de um usuário a partir do comportamento de navegação. O foco do desafio é a engenharia de ML em volta de um modelo clássico de classificação.
 
